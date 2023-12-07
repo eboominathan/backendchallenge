@@ -1,0 +1,35 @@
+from nginx:1.15
+
+RUN addgroup --gid 3000 --system app \
+    && adduser --uid 3000 --system --disabled-login --disabled-password --gid 3000 app \
+    && usermod -a -G app nginx \
+    && mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/site.conf.disabled \
+    && set -ex \
+    && { \
+        echo 'upstream _php {'; \
+        echo '  server unix:/sock/docker.sock;'; \
+        echo '}'; \
+        echo ''; \
+        echo 'server {'; \
+        echo '    listen       80;'; \
+        echo '    server_name  localhost;'; \
+        echo '    root         /var/www/html;'; \
+        echo '    index        index.php;'; \
+        echo '    error_page   500 502 503 504  /50x.html;'; \
+        echo '    location = /50x.html {'; \
+        echo '        root   /usr/share/nginx/html;'; \
+        echo '    }'; \
+        echo ''; \
+        echo '    location = /favicon.ico {'; \
+        echo '    }'; \
+        echo ''; \
+        echo '    location / {'; \
+        echo '        try_files /index.php =404;'; \
+        echo '        fastcgi_pass _php;'; \
+        echo '        fastcgi_index  index.php;'; \
+        echo '        fastcgi_param  SCRIPT_FILENAME  /var/www/html$fastcgi_script_name;'; \
+        echo '        include        fastcgi_params;'; \
+        echo '    }'; \
+        echo ''; \
+        echo '}'; \
+       } | tee /etc/nginx/conf.d/site.conf

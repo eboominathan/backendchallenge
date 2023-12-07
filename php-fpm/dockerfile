@@ -1,0 +1,18 @@
+from php:8.2-fpm
+
+RUN addgroup --gid 3000 --system app \
+    && adduser --uid 3000 --system --disabled-login --disabled-password --gid 3000 app \
+    && docker-php-ext-install pdo_mysql mysqli \
+    && set -ex; \
+    	cd /usr/local/etc  \
+    && { \
+		echo '[global]'; \
+		echo 'daemonize = no'; \
+		echo; \
+		echo '[www]'; \
+		echo 'listen = /sock/docker.sock'; \
+		echo 'listen.owner = app'; \
+		echo 'listen.group = app'; \
+		echo 'listen.mode = 0660'; \
+	} | tee php-fpm.d/zz-docker.conf
+	

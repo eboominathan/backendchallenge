@@ -1,0 +1,64 @@
+version: "3.3"
+
+services:
+  sql-db:
+    build:
+      context: ./sql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: codingchallenge
+      MYSQL_DATABASE: codingchallenge
+      MYSQL_USER: codingchallenge
+      MYSQL_PASSWORD: codingchallenge
+    ports:
+      - "8322:3306"
+    networks:
+      - backend-php
+
+  php-fpm:
+    depends_on:
+      - sql-db
+      - nginx_backend
+    build: ./php-fpm
+    restart: always
+    environment:
+      MYSQL_DB_HOST: sql-db
+      MYSQL_DB_PORT: 3306
+      MYSQL_DB_USER: codingchallenge
+      MYSQL_DB_PASSWORD: codingchallenge
+      MYSQL_DATABASE: codingchallenge
+      DATABASE_URL: mysql://codingchallenge:codingchallenge@sql-db:3306/codingchallenge
+    networks:
+      - backend-php
+    volumes:
+      - sock:/sock
+      - ./app:/var/www
+    links:
+      - sql-db
+
+  composer:
+    image: composer:latest
+    volumes:
+      - ./app:/app
+    working_dir: /app/html/
+    depends_on:
+      - sql-db
+      - php-fpm
+    command: bash -c "composer require --dev phpunit/phpunit ^9 && ./vendor/bin/phpunit tests"
+
+  nginx_backend:
+    build:
+      context: ./nginx-backend
+    ports:
+      - "8321:80"
+    volumes:
+      - ./app:/var/www:ro
+      - sock:/sock
+    networks:
+      - backend-php
+    restart: always
+
+volumes:
+  sock:
+
+networks:
+  backend-php:
